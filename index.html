@@ -1,12 +1,16 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500&family=Inter:wght@400;500&display=swap" rel="stylesheet">
-
-<h2 class="sr-only">Tara Rose Ladies Salon Branch Performance for June 1–14 2026, all branches, with May 2026 comparison.</h2>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 
 <style>
-  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
-  .trs-wrap { font-family: 'Inter', sans-serif; padding: 1.5rem 0; }
-  .trs-title { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 400; color: #2D2E37; margin: 0 0 4px; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', sans-serif; background: #F5F3EE; padding: 1.5rem; color: #2D2E37; }
+  .trs-title { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 400; color: #2D2E37; margin: 0 0 4px; }
   .trs-sub { font-size: 12px; color: #888; margin: 0 0 1.5rem; }
+  .month-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 1.5rem; align-items: center; }
+  .month-btn { font-size: 12px; font-family: 'Inter', sans-serif; padding: 6px 14px; border-radius: 20px; border: 1px solid #ddd; background: #fff; color: #555; cursor: pointer; transition: all 0.15s; }
+  .month-btn:hover { border-color: #2D2E37; color: #2D2E37; }
+  .month-btn.active { background: #2D2E37; color: #fff; border-color: #2D2E37; }
   .metrics { display: grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap: 10px; margin-bottom: 1.5rem; }
   .metric { background: #FAF8F3; border-radius: 8px; padding: 12px 14px; }
   .metric-label { font-size: 11px; color: #888; margin: 0 0 4px; }
@@ -18,7 +22,7 @@
   .legend { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 10px; }
   .legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #555; }
   .legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
-  .table-wrap { background: #FAF8F3; border-radius: 10px; padding: 16px; margin-bottom: 1.5rem; }
+  .table-wrap { background: #FAF8F3; border-radius: 10px; padding: 16px; margin-bottom: 1.5rem; overflow-x: auto; }
   table { width: 100%; border-collapse: collapse; font-size: 12px; }
   th { font-size: 11px; font-weight: 500; color: #888; text-align: left; padding: 6px 8px; border-bottom: 1px solid #E8E5DD; }
   th.num { text-align: right; }
@@ -27,240 +31,162 @@
   td.ret { color: #888; text-align: right; }
   td.pos { color: #059669; text-align: right; font-size: 11px; }
   td.neg { color: #DC2626; text-align: right; font-size: 11px; }
-  tr:last-child td { border-bottom: none; font-weight: 500; background: #E8E5DD; }
+  tr.total-row td { border-bottom: none; font-weight: 500; background: #E8E5DD; }
   .divider { border: none; border-top: 1px solid #E8E5DD; margin: 1.5rem 0; }
-  .compare-title { font-family: 'Playfair Display', serif; font-size: 17px; font-weight: 400; color: #2D2E37; margin: 0 0 4px; }
-  .compare-sub { font-size: 12px; color: #888; margin: 0 0 1.5rem; }
+  .section-title { font-family: 'Playfair Display', serif; font-size: 17px; font-weight: 400; color: #2D2E37; margin: 0 0 4px; }
+  .section-sub { font-size: 12px; color: #888; margin: 0 0 1.5rem; }
   .note { font-size: 11px; color: #aaa; margin: 8px 0 0; }
+  .loading { text-align: center; padding: 3rem; font-size: 14px; color: #aaa; }
+  .error-msg { background: #FEE2E2; color: #991B1B; padding: 12px 16px; border-radius: 8px; font-size: 13px; margin-bottom: 1rem; }
 </style>
 
-<div class="trs-wrap">
+<div id="app"><div class="loading">Loading data…</div></div>
 
-  <!-- ── JUNE SECTION ── -->
-  <p class="trs-title">Tara Rose Ladies Salon: Branch Performance</p>
-  <p class="trs-sub">June 1–14, 2026 · All branches · 14 days</p>
-
-  <div class="metrics">
-    <div class="metric">
-      <p class="metric-label">Total clients</p>
-      <p class="metric-val">972</p>
-      <p class="metric-sub">190 new · 782 returning</p>
-    </div>
-    <div class="metric">
-      <p class="metric-label">Total revenue</p>
-      <p class="metric-val">AED 684,899.28</p>
-      <p class="metric-sub">across 4 branches · ex VAT</p>
-    </div>
-    <div class="metric">
-      <p class="metric-label">New clients</p>
-      <p class="metric-val">190</p>
-      <p class="metric-sub">of 972 total (19.55%)</p>
-    </div>
-    <div class="metric">
-      <p class="metric-label">New client revenue</p>
-      <p class="metric-val">AED 289,814.82</p>
-      <p class="metric-sub">42.31% of total</p>
-    </div>
-    <div class="metric">
-      <p class="metric-label">Returning revenue</p>
-      <p class="metric-val">AED 395,084.46</p>
-      <p class="metric-sub">57.69% of total</p>
-    </div>
-  </div>
-
-  <div class="charts">
-    <div class="chart-card">
-      <p class="chart-title">Clients by branch — June</p>
-      <div class="legend">
-        <span class="legend-item"><span class="legend-dot" style="background:#2D2E37;"></span>New</span>
-        <span class="legend-item"><span class="legend-dot" style="background:#C4B5FD;"></span>Returning</span>
-      </div>
-      <div style="position:relative;height:200px;"><canvas id="clientChart" role="img" aria-label="Stacked bar chart of new and returning clients per branch for June 1–14 2026."></canvas></div>
-    </div>
-    <div class="chart-card">
-      <p class="chart-title">Revenue by branch — June (AED)</p>
-      <div class="legend">
-        <span class="legend-item"><span class="legend-dot" style="background:#2D2E37;"></span>New</span>
-        <span class="legend-item"><span class="legend-dot" style="background:#99F6E4;"></span>Returning</span>
-      </div>
-      <div style="position:relative;height:200px;"><canvas id="revChart" role="img" aria-label="Stacked bar chart of new and returning revenue per branch for June 1–14 2026."></canvas></div>
-    </div>
-  </div>
-
-  <div class="table-wrap">
-    <p class="chart-title" style="margin-bottom:10px;">June full breakdown</p>
-    <table>
-      <thead>
-        <tr>
-          <th>Branch</th>
-          <th class="num">New</th>
-          <th class="num">Returning</th>
-          <th class="num">Total clients</th>
-          <th class="num">New rev</th>
-          <th class="num">Returning rev</th>
-          <th class="num">Total rev</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr><td>Al Quoz</td><td class="num">19</td><td class="ret">69</td><td class="num">88</td><td class="num">AED 31,382.85</td><td class="ret">AED 35,841.89</td><td class="num">AED 67,224.74</td></tr>
-        <tr><td>Khalifa City A</td><td class="num">79</td><td class="ret">279</td><td class="num">358</td><td class="num">AED 112,267.44</td><td class="ret">AED 132,403.61</td><td class="num">AED 244,671.05</td></tr>
-        <tr><td>Motor City</td><td class="num">28</td><td class="ret">107</td><td class="num">135</td><td class="num">AED 39,995.52</td><td class="ret">AED 55,255.42</td><td class="num">AED 95,250.94</td></tr>
-        <tr><td>Mamsha al Saadiyat</td><td class="num">64</td><td class="ret">327</td><td class="num">391</td><td class="num">AED 106,169.01</td><td class="ret">AED 171,583.55</td><td class="num">AED 277,752.56</td></tr>
-        <tr><td>TOTAL</td><td class="num">190</td><td class="ret">782</td><td class="num">972</td><td class="num">AED 289,814.82</td><td class="ret">AED 395,084.46</td><td class="num">AED 684,899.28</td></tr>
-      </tbody>
-    </table>
-  </div>
-
-  <hr class="divider">
-
-  <!-- ── MAY COMPARISON SECTION ── -->
-  <p class="compare-title">May comparison</p>
-  <p class="compare-sub">May 1–31, 2026 · All branches · 31 days</p>
-
-  <div class="metrics">
-    <div class="metric">
-      <p class="metric-label">Total clients</p>
-      <p class="metric-val">2,207</p>
-      <p class="metric-sub">490 new · 1,717 returning</p>
-    </div>
-    <div class="metric">
-      <p class="metric-label">Total revenue</p>
-      <p class="metric-val">AED 1.86M</p>
-      <p class="metric-sub">across 4 branches</p>
-    </div>
-    <div class="metric">
-      <p class="metric-label">New clients</p>
-      <p class="metric-val">490</p>
-      <p class="metric-sub">of 2,207 total (22.20%)</p>
-    </div>
-    <div class="metric">
-      <p class="metric-label">New client revenue</p>
-      <p class="metric-val">AED 882.8K</p>
-      <p class="metric-sub">47.39% of total</p>
-    </div>
-    <div class="metric">
-      <p class="metric-label">Returning revenue</p>
-      <p class="metric-val">AED 980.2K</p>
-      <p class="metric-sub">52.61% of total</p>
-    </div>
-  </div>
-
-  <div class="table-wrap">
-    <p class="chart-title" style="margin-bottom:10px;">May full breakdown</p>
-    <table>
-      <thead>
-        <tr>
-          <th>Branch</th>
-          <th class="num">New</th>
-          <th class="num">Returning</th>
-          <th class="num">Total clients</th>
-          <th class="num">New rev</th>
-          <th class="num">Returning rev</th>
-          <th class="num">Total rev</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr><td>Al Quoz</td><td class="num">59</td><td class="ret">164</td><td class="num">223</td><td class="num">AED 109,464.44</td><td class="ret">AED 93,602.81</td><td class="num">AED 203,067.25</td></tr>
-        <tr><td>Khalifa City A</td><td class="num">211</td><td class="ret">649</td><td class="num">860</td><td class="num">AED 377,517.73</td><td class="ret">AED 329,945.66</td><td class="num">AED 707,463.39</td></tr>
-        <tr><td>Motor City</td><td class="num">63</td><td class="ret">218</td><td class="num">281</td><td class="num">AED 111,954.36</td><td class="ret">AED 146,603.60</td><td class="num">AED 258,557.96</td></tr>
-        <tr><td>Mamsha al Saadiyat</td><td class="num">157</td><td class="ret">686</td><td class="num">843</td><td class="num">AED 283,861.99</td><td class="ret">AED 410,054.93</td><td class="num">AED 693,916.92</td></tr>
-        <tr><td>TOTAL</td><td class="num">490</td><td class="ret">1,717</td><td class="num">2,207</td><td class="num">AED 882,798.52</td><td class="ret">AED 980,206.99</td><td class="num">AED 1,863,005.52</td></tr>
-      </tbody>
-    </table>
-  </div>
-
-  <div class="table-wrap">
-    <p class="chart-title" style="margin-bottom:10px;">Daily average comparison — June vs May</p>
-    <table>
-      <thead>
-        <tr>
-          <th>Branch</th>
-          <th class="num">Jun clients/day</th>
-          <th class="num">May clients/day</th>
-          <th class="num">Δ clients</th>
-          <th class="num">Jun rev/day</th>
-          <th class="num">May rev/day</th>
-          <th class="num">Δ rev</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>Al Quoz</td>
-          <td class="num">6.3</td><td class="num">7.2</td><td class="neg">−12.5%</td>
-          <td class="num">AED 4,802</td><td class="num">AED 6,551</td><td class="neg">−26.7%</td>
-        </tr>
-        <tr>
-          <td>Khalifa City A</td>
-          <td class="num">25.6</td><td class="num">27.7</td><td class="neg">−7.6%</td>
-          <td class="num">AED 17,476</td><td class="num">AED 22,821</td><td class="neg">−23.4%</td>
-        </tr>
-        <tr>
-          <td>Motor City</td>
-          <td class="num">9.6</td><td class="num">9.1</td><td class="pos">+6.0%</td>
-          <td class="num">AED 6,804</td><td class="num">AED 8,341</td><td class="neg">−18.4%</td>
-        </tr>
-        <tr>
-          <td>Mamsha al Saadiyat</td>
-          <td class="num">27.9</td><td class="num">27.2</td><td class="pos">+2.6%</td>
-          <td class="num">AED 19,839</td><td class="num">AED 22,384</td><td class="neg">−11.4%</td>
-        </tr>
-        <tr>
-          <td>TOTAL</td>
-          <td class="num">69.4</td><td class="num">71.2</td><td class="neg">−2.5%</td>
-          <td class="num">AED 48,921</td><td class="num">AED 60,097</td><td class="neg">−18.6%</td>
-        </tr>
-      </tbody>
-    </table>
-    <p class="note">Daily averages used for fair comparison — June covers 14 days (1–14 Jun), May covers 31 days. Revenue ex VAT throughout.</p>
-  </div>
-
-</div>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
-const branches = ['Al Quoz', 'KCA', 'Motor City', 'Saadiyat'];
-const newClients = [19, 79, 28, 64];
-const retClients = [69, 279, 107, 327];
-const newRev = [31383, 112267, 39996, 106169];
-const retRev = [35842, 132404, 55255, 171584];
+const SUPABASE_URL = 'https://ouiaoditcgzlzigzgcjy.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_jZhB363A5nZSDV5B5guwsg_J9Df7YSl';
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const baseOpts = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: { legend: { display: false }, tooltip: { callbacks: {} } },
-  scales: {
-    x: { stacked: true, grid: { display: false }, ticks: { font: { family: 'Inter', size: 11 }, color: '#888' } },
-    y: { stacked: true, grid: { color: '#E8E5DD' }, ticks: { font: { family: 'Inter', size: 10 }, color: '#888' } }
+const MONTH_NAMES = {'01':'January','02':'February','03':'March','04':'April','05':'May','06':'June','07':'July','08':'August','09':'September','10':'October','11':'November','12':'December'};
+const BRANCH_ORDER = ['Al Quoz','Khalifa','Motor City','Saadiyat','Mamsha'];
+
+let allData = {}, allMonths = [], clientChart = null, revChart = null;
+
+function getDays(m) {
+  const [y,mo] = m.split('-').map(Number), t = new Date();
+  if (t.getFullYear()===y && t.getMonth()+1===mo) return t.getDate();
+  return new Date(y,mo,0).getDate();
+}
+function mLabel(m) { const [y,mo]=m.split('-'); return (MONTH_NAMES[mo]||mo)+' '+y; }
+function mShort(m) { const [y,mo]=m.split('-'); return (MONTH_NAMES[mo]||mo).slice(0,3)+' '+y; }
+function aed(v,c) {
+  if (v==null) return '—';
+  if (c&&v>=1000000) return 'AED '+(v/1000000).toFixed(2)+'M';
+  if (c&&v>=1000) return 'AED '+(v/1000).toFixed(1)+'K';
+  return 'AED '+Number(v).toLocaleString('en-AE',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+function sortB(rows) {
+  return [...rows].sort((a,b)=>{
+    const ai=BRANCH_ORDER.findIndex(n=>a.branch.toLowerCase().includes(n.toLowerCase()));
+    const bi=BRANCH_ORDER.findIndex(n=>b.branch.toLowerCase().includes(n.toLowerCase()));
+    return (ai===-1?99:ai)-(bi===-1?99:bi);
+  });
+}
+function sumT(rows) {
+  return ['total_clients','new_clients','returning_clients','total_revenue','new_revenue','returning_revenue']
+    .reduce((a,k)=>({...a,[k]:rows.reduce((s,r)=>s+(r[k]||0),0)}),{});
+}
+function dCell(a,b) {
+  if (!a||!b) return '<td class="num">—</td>';
+  const d=((a-b)/b)*100;
+  return `<td class="${d>=0?'pos':'neg'}">${d>=0?'+':''}${d.toFixed(1)}%</td>`;
+}
+
+function renderMetrics(t) {
+  const np=t.total_clients?((t.new_clients/t.total_clients)*100).toFixed(2):0;
+  const nrp=t.total_revenue?((t.new_revenue/t.total_revenue)*100).toFixed(2):0;
+  const rrp=t.total_revenue?((t.returning_revenue/t.total_revenue)*100).toFixed(2):0;
+  return `<div class="metrics">
+    <div class="metric"><p class="metric-label">Total clients</p><p class="metric-val">${t.total_clients.toLocaleString()}</p><p class="metric-sub">${t.new_clients.toLocaleString()} new · ${t.returning_clients.toLocaleString()} returning</p></div>
+    <div class="metric"><p class="metric-label">Total revenue</p><p class="metric-val">${aed(t.total_revenue,true)}</p><p class="metric-sub">across 4 branches · ex VAT</p></div>
+    <div class="metric"><p class="metric-label">New clients</p><p class="metric-val">${t.new_clients.toLocaleString()}</p><p class="metric-sub">of ${t.total_clients.toLocaleString()} total (${np}%)</p></div>
+    <div class="metric"><p class="metric-label">New client revenue</p><p class="metric-val">${aed(t.new_revenue,true)}</p><p class="metric-sub">${nrp}% of total</p></div>
+    <div class="metric"><p class="metric-label">Returning revenue</p><p class="metric-val">${aed(t.returning_revenue,true)}</p><p class="metric-sub">${rrp}% of total</p></div>
+  </div>`;
+}
+
+function renderTable(branches, total, title) {
+  const rows = sortB(branches).map(r=>`<tr>
+    <td>${r.branch}</td><td class="num">${(r.new_clients||0).toLocaleString()}</td><td class="ret">${(r.returning_clients||0).toLocaleString()}</td><td class="num">${(r.total_clients||0).toLocaleString()}</td>
+    <td class="num">${aed(r.new_revenue)}</td><td class="ret">${aed(r.returning_revenue)}</td><td class="num">${aed(r.total_revenue)}</td>
+  </tr>`).join('');
+  return `<div class="table-wrap"><p class="chart-title" style="margin-bottom:10px;">${title}</p>
+    <table><thead><tr><th>Branch</th><th class="num">New</th><th class="num">Returning</th><th class="num">Total clients</th><th class="num">New rev</th><th class="num">Returning rev</th><th class="num">Total rev</th></tr></thead>
+    <tbody>${rows}<tr class="total-row"><td>TOTAL</td><td class="num">${total.new_clients.toLocaleString()}</td><td class="ret">${total.returning_clients.toLocaleString()}</td><td class="num">${total.total_clients.toLocaleString()}</td><td class="num">${aed(total.new_revenue)}</td><td class="ret">${aed(total.returning_revenue)}</td><td class="num">${aed(total.total_revenue)}</td></tr></tbody>
+    </table></div>`;
+}
+
+function renderDailyAvg(cb,ct,cm,pb,pt,pm) {
+  const cd=getDays(cm),pd=getDays(pm);
+  const pMap={};
+  pb.forEach(r=>pMap[r.branch.toLowerCase()]=r);
+  function fp(b){const k=b.toLowerCase();return pMap[k]||Object.values(pMap).find(p=>k.includes(p.branch.toLowerCase().split(' ')[0])||p.branch.toLowerCase().includes(k.split(' ')[0]));}
+  const rows=sortB(cb).map(r=>{
+    const p=fp(r.branch);
+    const cc=(r.total_clients||0)/cd,pc=p?(p.total_clients||0)/pd:null;
+    const cr=(r.total_revenue||0)/cd,pr=p?(p.total_revenue||0)/pd:null;
+    return `<tr><td>${r.branch}</td><td class="num">${cc.toFixed(1)}</td><td class="num">${pc!==null?pc.toFixed(1):'—'}</td>${dCell(cc,pc)}<td class="num">AED ${Math.round(cr).toLocaleString()}</td><td class="num">${pr!==null?'AED '+Math.round(pr).toLocaleString():'—'}</td>${dCell(cr,pr)}</tr>`;
+  }).join('');
+  const cc=ct.total_clients/cd,pc=pt.total_clients/pd,cr=ct.total_revenue/cd,pr=pt.total_revenue/pd;
+  return `<div class="table-wrap"><p class="chart-title" style="margin-bottom:10px;">Daily average — ${mShort(cm)} vs ${mShort(pm)}</p>
+    <table><thead><tr><th>Branch</th><th class="num">${mShort(cm)} clients/day</th><th class="num">${mShort(pm)} clients/day</th><th class="num">Δ clients</th><th class="num">${mShort(cm)} rev/day</th><th class="num">${mShort(pm)} rev/day</th><th class="num">Δ rev</th></tr></thead>
+    <tbody>${rows}<tr class="total-row"><td>TOTAL</td><td class="num">${cc.toFixed(1)}</td><td class="num">${pc.toFixed(1)}</td>${dCell(cc,pc)}<td class="num">AED ${Math.round(cr).toLocaleString()}</td><td class="num">AED ${Math.round(pr).toLocaleString()}</td>${dCell(cr,pr)}</tr></tbody>
+    </table><p class="note">${mShort(cm)} covers ${cd} days · ${mShort(pm)} covers ${pd} days · Revenue ex VAT</p></div>`;
+}
+
+function renderCharts(branches, label) {
+  const s=sortB(branches);
+  const labels=s.map(r=>r.branch.replace('Mamsha al Saadiyat','SAA').replace('Khalifa City A','KCA').replace('Khalifa','KCA').replace('Motor City','MC').replace('Al Quoz','AQ').replace('Saadiyat','SAA'));
+  setTimeout(()=>{
+    if(clientChart)clientChart.destroy();
+    if(revChart)revChart.destroy();
+    const base={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{stacked:true,grid:{display:false},ticks:{font:{family:'Inter',size:11},color:'#888'}},y:{stacked:true,grid:{color:'#E8E5DD'},ticks:{font:{family:'Inter',size:10},color:'#888'}}}};
+    clientChart=new Chart(document.getElementById('cc'),{type:'bar',data:{labels,datasets:[
+      {label:'New',data:s.map(r=>r.new_clients||0),backgroundColor:'#2D2E37',borderRadius:2},
+      {label:'Returning',data:s.map(r=>r.returning_clients||0),backgroundColor:'#C4B5FD',borderRadius:2}
+    ]},options:{...base}});
+    revChart=new Chart(document.getElementById('rc'),{type:'bar',data:{labels,datasets:[
+      {label:'New',data:s.map(r=>r.new_revenue||0),backgroundColor:'#2D2E37',borderRadius:2},
+      {label:'Returning',data:s.map(r=>r.returning_revenue||0),backgroundColor:'#99F6E4',borderRadius:2}
+    ]},options:{...base,scales:{...base.scales,y:{...base.scales.y,ticks:{...base.scales.y.ticks,callback:v=>v>=1000?(v/1000).toFixed(0)+'K':v}}}}});
+  },50);
+  return `<div class="charts">
+    <div class="chart-card"><p class="chart-title">Clients by branch — ${label}</p>
+      <div class="legend"><span class="legend-item"><span class="legend-dot" style="background:#2D2E37"></span>New</span><span class="legend-item"><span class="legend-dot" style="background:#C4B5FD"></span>Returning</span></div>
+      <div style="position:relative;height:200px"><canvas id="cc"></canvas></div></div>
+    <div class="chart-card"><p class="chart-title">Revenue by branch — ${label} (AED)</p>
+      <div class="legend"><span class="legend-item"><span class="legend-dot" style="background:#2D2E37"></span>New</span><span class="legend-item"><span class="legend-dot" style="background:#99F6E4"></span>Returning</span></div>
+      <div style="position:relative;height:200px"><canvas id="rc"></canvas></div></div>
+  </div>`;
+}
+
+function renderMonth(monthStr) {
+  document.querySelectorAll('.month-btn').forEach(b=>b.classList.toggle('active',b.dataset.m===monthStr));
+  const branches=allData[monthStr].filter(r=>r.branch.toUpperCase()!=='TOTAL');
+  const t=sumT(branches);
+  const days=getDays(monthStr);
+  const [y]=monthStr.split('-');
+  const prevMonth=allMonths[allMonths.indexOf(monthStr)+1];
+  const prevBranches=prevMonth?allData[prevMonth].filter(r=>r.branch.toUpperCase()!=='TOTAL'):[];
+  const pt=prevMonth?sumT(prevBranches):null;
+
+  let html=`<p class="trs-title">Branch performance</p><p class="trs-sub">${mLabel(monthStr).split(' ')[0]} 1–${days}, ${y} · All branches · ${days} days</p>`;
+  html+=renderMetrics(t);
+  html+=renderCharts(branches,mLabel(monthStr));
+  html+=renderTable(branches,t,`${mLabel(monthStr)} full breakdown`);
+  if(prevMonth&&prevBranches.length>0){
+    html+=`<hr class="divider"><p class="section-title">${mLabel(prevMonth)} comparison</p><p class="section-sub">${mLabel(prevMonth)} · All branches · ${getDays(prevMonth)} days</p>`;
+    html+=renderMetrics(pt);
+    html+=renderTable(prevBranches,pt,`${mLabel(prevMonth)} full breakdown`);
+    html+=renderDailyAvg(branches,t,monthStr,prevBranches,pt,prevMonth);
   }
-};
+  document.getElementById('dashboard').innerHTML=html;
+}
 
-new Chart(document.getElementById('clientChart'), {
-  type: 'bar',
-  data: {
-    labels: branches,
-    datasets: [
-      { label: 'New', data: newClients, backgroundColor: '#2D2E37', borderRadius: 2 },
-      { label: 'Returning', data: retClients, backgroundColor: '#C4B5FD', borderRadius: 2 }
-    ]
-  },
-  options: { ...baseOpts }
-});
-
-new Chart(document.getElementById('revChart'), {
-  type: 'bar',
-  data: {
-    labels: branches,
-    datasets: [
-      { label: 'New', data: newRev, backgroundColor: '#2D2E37', borderRadius: 2 },
-      { label: 'Returning', data: retRev, backgroundColor: '#99F6E4', borderRadius: 2 }
-    ]
-  },
-  options: {
-    ...baseOpts,
-    scales: {
-      ...baseOpts.scales,
-      y: { ...baseOpts.scales.y, ticks: { ...baseOpts.scales.y.ticks, callback: v => v >= 1000 ? (v/1000).toFixed(0)+'K' : v } }
-    }
+async function init() {
+  const app=document.getElementById('app');
+  const {data,error}=await db.from('branch_performance').select('*').order('month',{ascending:false});
+  if(error||!data||!data.length){
+    app.innerHTML=`<div class="error-msg">${error?.message||'No data found. Upload your xlsx files first using upload.html.'}</div>`;
+    return;
   }
-});
+  data.forEach(r=>{if(!allData[r.month])allData[r.month]=[];allData[r.month].push(r);});
+  allMonths=Object.keys(allData).sort().reverse();
+  const btns=allMonths.map(m=>`<button class="month-btn" data-m="${m}" onclick="renderMonth('${m}')">${mShort(m)}</button>`).join('');
+  app.innerHTML=`<p class="trs-title">Tara Rose Ladies Salon</p><p class="trs-sub">Branch performance dashboard · ${allMonths.length} months loaded</p><div class="month-bar">${btns}</div><div id="dashboard"></div>`;
+  renderMonth(allMonths[0]);
+}
+
+init();
 </script>
