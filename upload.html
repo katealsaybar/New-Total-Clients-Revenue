@@ -38,6 +38,9 @@
   .log .err { color: #f87171; }
   .actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
   .sheet-select { font-size: 13px; padding: 6px 10px; border: 1px solid #ddd; border-radius: 6px; }
+  .period-row { background: #fff3cd; border-radius: 8px; padding: 10px 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; font-size: 13px; }
+  .period-row label { font-weight: 500; }
+  .period-row input { width: 60px; padding: 4px 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; text-align: center; }
 </style>
 </head>
 <body>
@@ -221,9 +224,29 @@ function fmt(v) {
   return v.toLocaleString();
 }
 
+function daysInMonth(monthStr) {
+  const [y, m] = monthStr.split('-').map(Number);
+  return new Date(y, m, 0).getDate();
+}
+
 function renderPreview() {
   const tbody = document.getElementById('previewBody');
   tbody.innerHTML = '';
+
+  // Show period end day inputs for each unique month
+  const fileList = document.getElementById('fileList');
+  document.querySelectorAll('.period-row').forEach(el => el.remove());
+  const months = [...new Set(parsedRows.map(r => r.month))].sort();
+  months.forEach(m => {
+    const fullDays = daysInMonth(m);
+    const div = document.createElement('div');
+    div.className = 'period-row';
+    div.innerHTML = `<label>${m} — how many days does this data cover?</label>
+      <input type="number" id="days_${m}" min="1" max="${fullDays}" value="${fullDays}" style="width:60px">
+      <span style="color:#888;font-size:12px">/ ${fullDays} days in month</span>`;
+    fileList.after(div);
+  });
+
   parsedRows.forEach(r => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
@@ -266,8 +289,14 @@ async function uploadAll() {
     else { log('Cleared existing data for ' + month); }
   }
 
+  // Stamp period_end_day from inputs onto each row
+  const rowsToInsert = parsedRows.map(r => ({
+    ...r,
+    period_end_day: parseInt(document.getElementById('days_' + r.month)?.value) || null
+  }));
+
   // Insert all rows
-  const { error } = await db.from('branch_performance').insert(parsedRows);
+  const { error } = await db.from('branch_performance').insert(rowsToInsert);
   if (error) {
     log('Upload failed: ' + error.message, true);
   } else {

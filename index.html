@@ -53,9 +53,13 @@ const BRANCH_ORDER = ['Al Quoz','Khalifa','Motor City','Saadiyat','Mamsha'];
 let allData = {}, allMonths = [], clientChart = null, revChart = null;
 
 function getDays(m) {
-  const [y,mo] = m.split('-').map(Number), t = new Date();
-  if (t.getFullYear()===y && t.getMonth()+1===mo) return t.getDate();
-  return new Date(y,mo,0).getDate();
+  const rows = allData[m];
+  if (rows) {
+    const stored = rows.find(r => r.period_end_day)?.period_end_day;
+    if (stored) return stored;
+  }
+  const [y, mo] = m.split('-').map(Number);
+  return new Date(y, mo, 0).getDate();
 }
 function mLabel(m) { const [y,mo]=m.split('-'); return (MONTH_NAMES[mo]||mo)+' '+y; }
 function mShort(m) { const [y,mo]=m.split('-'); return (MONTH_NAMES[mo]||mo).slice(0,3)+' '+y; }
