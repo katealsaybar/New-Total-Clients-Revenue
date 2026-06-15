@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>TRS — Upload Branch Data to Supabase</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Inter, sans-serif; background: #f5f5f0; padding: 2rem; color: #2D2E37; }
+  h1 { font-size: 20px; margin-bottom: 4px; }
+  .sub { font-size: 13px; color: #888; margin-bottom: 2rem; }
+  .drop-zone { border: 2px dashed #ccc; border-radius: 10px; padding: 2.5rem; text-align: center; background: #fff; cursor: pointer; margin-bottom: 1.5rem; transition: border-color 0.2s; }
+  .drop-zone:hover, .drop-zone.over { border-color: #2D2E37; }
+  .drop-zone input { display: none; }
+  .drop-zone p { font-size: 14px; color: #666; }
+  .drop-zone strong { display: block; font-size: 16px; margin-bottom: 6px; color: #2D2E37; }
+  .file-list { margin-bottom: 1.5rem; }
+  .file-item { background: #fff; border-radius: 8px; padding: 10px 14px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; font-size: 13px; }
+  .file-item .name { font-weight: 500; }
+  .file-item .status { font-size: 12px; padding: 2px 8px; border-radius: 20px; }
+  .status.pending { background: #FEF3C7; color: #92400E; }
+  .status.ok { background: #D1FAE5; color: #065F46; }
+  .status.error { background: #FEE2E2; color: #991B1B; }
+  .preview-wrap { background: #fff; border-radius: 10px; padding: 16px; margin-bottom: 1.5rem; overflow-x: auto; }
+  .preview-wrap h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: #888; margin-bottom: 12px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th { font-size: 11px; color: #888; text-align: left; padding: 6px 8px; border-bottom: 1px solid #eee; }
+  td { padding: 7px 8px; border-bottom: 0.5px solid #eee; }
+  tr:last-child td { border-bottom: none; font-weight: 600; background: #f5f5f0; }
+  .btn { display: inline-block; padding: 10px 24px; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; border: none; }
+  .btn-upload { background: #2D2E37; color: #fff; }
+  .btn-upload:hover { background: #1a1b22; }
+  .btn-upload:disabled { background: #ccc; cursor: not-allowed; }
+  .btn-clear { background: #E8E5DD; color: #2D2E37; margin-left: 10px; }
+  .log { background: #1a1b22; color: #a0f0c0; border-radius: 8px; padding: 14px; font-size: 12px; font-family: monospace; margin-top: 1.5rem; max-height: 200px; overflow-y: auto; display: none; }
+  .log p { margin-bottom: 4px; }
+  .log .err { color: #f87171; }
+  .actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+  .sheet-select { font-size: 13px; padding: 6px 10px; border: 1px solid #ddd; border-radius: 6px; }
+</style>
+</head>
+<body>
+
+<h1>TRS Branch Data — Upload to Supabase</h1>
+<p class="sub">Drop your monthly xlsx files. Reads the summary sheet and uploads branch rows automatically.</p>
+
+<div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+  <strong>Click or drag & drop xlsx files here</strong>
+  <p>Accepts multiple files — all 6 months at once</p>
+  <input type="file" id="fileInput" accept=".xlsx" multiple>
+</div>
+
+<div class="file-list" id="fileList"></div>
+<div class="preview-wrap" id="previewWrap" style="display:none">
+  <h3>Preview — data to be uploaded</h3>
+  <table id="previewTable">
+    <thead>
+      <tr>
+        <th>Month</th><th>Branch</th><th>Total</th><th>New</th><th>Returning</th>
+        <th>New %</th><th>Total Rev</th><th>New Rev</th><th>Ret Rev</th>
+      </tr>
+    </thead>
+    <tbody id="previewBody"></tbody>
+  </table>
+</div>
+
+<div class="actions">
+  <button class="btn btn-upload" id="uploadBtn" disabled onclick="uploadAll()">Upload to Supabase</button>
+  <button class="btn btn-clear" onclick="clearAll()">Clear</button>
+</div>
+
+<div class="log" id="log"></div>
+
+<script>
+const SUPABASE_URL = 'https://ouiaoditcgzlzigzgcjy.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_jZhB363A5nZSDV5B5guwsg_J9Df7YSl';
+const { createClient } = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const BRANCH_NAMES = ['saadiyat','mamsha','khalifa','motor city','al quoz','motor','kca'];
+let parsedRows = [];
+
+// ── drag & drop ──
+const dropZone = document.getElementById('dropZone');
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('over'));
+dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('over'); handleFiles(e.dataTransfer.files); });
+document.getElementById('fileInput').addEventListener('change', e => handleFiles(e.target.files));
+
+function handleFiles(files) {
+  parsedRows = [];
+  document.getElementById('previewBody').innerHTML = '';
+  document.getElementById('fileList').innerHTML = '';
+  document.getElementById('previewWrap').style.display = 'none';
+  document.getElementById('uploadBtn').disabled = true;
+
+  Array.from(files).forEach(file => {
+    const item = document.createElement('div');
+    item.className = 'file-item';
+    item.id = 'fi_' + file.name;
+    item.innerHTML = `<span class="name">${file.name}</span><span class="status pending" id="st_${file.name}">Reading...</span>`;
+    document.getElementById('fileList').appendChild(item);
+
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const wb = XLSX.read(e.target.result, { type: 'array' });
+        const month = extractMonth(file.name);
+        const rows = extractSummaryRows(wb, month, file.name);
+        if (rows.length === 0) throw new Error('No branch rows found');
+        parsedRows.push(...rows);
+        document.getElementById('st_' + file.name).textContent = `✓ ${rows.length} rows`;
+        document.getElementById('st_' + file.name).className = 'status ok';
+        renderPreview();
+        document.getElementById('uploadBtn').disabled = false;
+      } catch(err) {
+        document.getElementById('st_' + file.name).textContent = 'Error: ' + err.message;
+        document.getElementById('st_' + file.name).className = 'status error';
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+function extractMonth(filename) {
+  // "06 JUNE 2026 New & Total..." → "2026-06"
+  const m = filename.match(/^(\d{2})\s+\w+\s+(\d{4})/);
+  if (m) return `${m[2]}-${m[1]}`;
+  const m2 = filename.match(/(\d{4})/);
+  return m2 ? m2[1] + '-??' : 'unknown';
+}
+
+function extractSummaryRows(wb, month, filename) {
+  // Try each sheet — find the one with Branch column
+  for (const sheetName of wb.SheetNames) {
+    const ws = wb.Sheets[sheetName];
+    const data = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+    // Find header row
+    let headerIdx = -1;
+    for (let i = 0; i < Math.min(data.length, 5); i++) {
+      const row = data[i].map(c => String(c).toLowerCase());
+      if (row.some(c => c.includes('branch')) && row.some(c => c.includes('client'))) {
+        headerIdx = i;
+        break;
+      }
+    }
+    if (headerIdx === -1) continue;
+
+    const headers = data[headerIdx].map(c => String(c).toLowerCase().trim());
+    const colIdx = {
+      branch: findCol(headers, ['branch']),
+      total_clients: findCol(headers, ['total clients', 'total client']),
+      new_clients: findCol(headers, ['new clients', 'new client']),
+      returning_clients: findCol(headers, ['returning clients', 'returning client']),
+      new_client_pct: findCol(headers, ['new client %', 'new client%', 'new %']),
+      returning_client_pct: findCol(headers, ['returning client %', 'returning client%', 'returning %']),
+      total_revenue: findCol(headers, ['total client revenue', 'total revenue']),
+      new_revenue: findCol(headers, ['new client revenue', 'new revenue']),
+      returning_revenue: findCol(headers, ['returning client revenue', 'returning revenue']),
+      new_revenue_pct: findCol(headers, ['new client revenue%', 'new revenue%', 'new client revenue %']),
+      returning_revenue_pct: findCol(headers, ['returning revenue %', 'returning revenue%']),
+    };
+
+    const rows = [];
+    for (let i = headerIdx + 1; i < data.length; i++) {
+      const row = data[i];
+      const branchRaw = String(row[colIdx.branch] || '').trim();
+      if (!branchRaw) continue;
+      // Skip blank rows
+      if (row.every(c => c === '' || c === null || c === undefined)) continue;
+
+      rows.push({
+        month,
+        branch: branchRaw,
+        total_clients: toInt(row[colIdx.total_clients]),
+        new_clients: toInt(row[colIdx.new_clients]),
+        returning_clients: toInt(row[colIdx.returning_clients]),
+        new_client_pct: toPct(row[colIdx.new_client_pct]),
+        returning_client_pct: toPct(row[colIdx.returning_client_pct]),
+        total_revenue: toNum(row[colIdx.total_revenue]),
+        new_revenue: toNum(row[colIdx.new_revenue]),
+        returning_revenue: toNum(row[colIdx.returning_revenue]),
+        new_revenue_pct: toPct(row[colIdx.new_revenue_pct]),
+        returning_revenue_pct: toPct(row[colIdx.returning_revenue_pct]),
+      });
+    }
+    if (rows.length > 0) return rows;
+  }
+  return [];
+}
+
+function findCol(headers, candidates) {
+  for (const c of candidates) {
+    const idx = headers.findIndex(h => h.includes(c));
+    if (idx !== -1) return idx;
+  }
+  return -1;
+}
+
+function toInt(v) {
+  if (v === '' || v === null || v === undefined) return null;
+  return parseInt(String(v).replace(/[^0-9.-]/g, '')) || null;
+}
+
+function toNum(v) {
+  if (v === '' || v === null || v === undefined) return null;
+  return parseFloat(String(v).replace(/[^0-9.-]/g, '')) || null;
+}
+
+function toPct(v) {
+  if (v === '' || v === null || v === undefined) return null;
+  const n = parseFloat(String(v).replace(/[^0-9.-]/g, ''));
+  if (isNaN(n)) return null;
+  // If stored as decimal (0.1637) → convert to percentage
+  return n < 2 ? parseFloat((n * 100).toFixed(4)) : n;
+}
+
+function fmt(v) {
+  if (v === null || v === undefined) return '—';
+  return v.toLocaleString();
+}
+
+function renderPreview() {
+  const tbody = document.getElementById('previewBody');
+  tbody.innerHTML = '';
+  parsedRows.forEach(r => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${r.month}</td>
+      <td>${r.branch}</td>
+      <td>${fmt(r.total_clients)}</td>
+      <td>${fmt(r.new_clients)}</td>
+      <td>${fmt(r.returning_clients)}</td>
+      <td>${r.new_client_pct !== null ? r.new_client_pct + '%' : '—'}</td>
+      <td>${r.total_revenue !== null ? 'AED ' + r.total_revenue.toLocaleString() : '—'}</td>
+      <td>${r.new_revenue !== null ? 'AED ' + r.new_revenue.toLocaleString() : '—'}</td>
+      <td>${r.returning_revenue !== null ? 'AED ' + r.returning_revenue.toLocaleString() : '—'}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+  document.getElementById('previewWrap').style.display = 'block';
+}
+
+async function uploadAll() {
+  const btn = document.getElementById('uploadBtn');
+  btn.disabled = true;
+  btn.textContent = 'Uploading...';
+  const logEl = document.getElementById('log');
+  logEl.style.display = 'block';
+  logEl.innerHTML = '';
+
+  function log(msg, err) {
+    const p = document.createElement('p');
+    p.className = err ? 'err' : '';
+    p.textContent = (err ? '✗ ' : '✓ ') + msg;
+    logEl.appendChild(p);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  // Delete existing rows for the same months first (upsert by month+branch)
+  const months = [...new Set(parsedRows.map(r => r.month))];
+  for (const month of months) {
+    const { error } = await db.from('branch_performance').delete().eq('month', month);
+    if (error) { log('Failed to clear month ' + month + ': ' + error.message, true); }
+    else { log('Cleared existing data for ' + month); }
+  }
+
+  // Insert all rows
+  const { error } = await db.from('branch_performance').insert(parsedRows);
+  if (error) {
+    log('Upload failed: ' + error.message, true);
+  } else {
+    log(`Uploaded ${parsedRows.length} rows successfully!`);
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Upload to Supabase';
+}
+
+function clearAll() {
+  parsedRows = [];
+  document.getElementById('fileList').innerHTML = '';
+  document.getElementById('previewBody').innerHTML = '';
+  document.getElementById('previewWrap').style.display = 'none';
+  document.getElementById('log').style.display = 'none';
+  document.getElementById('uploadBtn').disabled = true;
+  document.getElementById('fileInput').value = '';
+}
+</script>
+</body>
+</html>
